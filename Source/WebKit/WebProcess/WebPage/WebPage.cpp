@@ -3844,6 +3844,9 @@ void WebPage::resume(CompletionHandler<void(bool)>&& completionHandler)
     Ref<ResumeEventNotifier> notifier = adoptRef(*new ResumeEventNotifier());
     notifier->setCompletionHandler([this, completionHandler = std::exchange(completionHandler, { })] () mutable {
         m_isLifecycleSuspended = false;
+        // This is the last step of the resume before moving into hidden state, so we want to request
+        // a single frame here.
+        m_drawingArea->renderSingleFrameIfRenderingPaused();
         completionHandler(true);
     });
 
@@ -7257,6 +7260,13 @@ void WebPage::dispatchDidReachLayoutMilestone(OptionSet<WebCore::LayoutMilestone
     if (milestones.contains(DidFirstLayout) && mainFrameView()) {
         // Ensure we never send DidFirstLayout milestone without updating the intrinsic size.
         updateIntrinsicContentSizeIfNeeded(mainFrameView()->autoSizingIntrinsicContentSize());
+    }
+
+    if (milestones.contains(DidFirstLayout) && m_page->settings().pageLifecycleAPIEnabled() && !m_isLifecycleSuspended) {
+        // The page finished its first layout. This can happen when the page is loaded for the first time or
+        // when the view is resuming. If m_isLifecycleSuspended is false it means that it's the first load
+        // so this is the point where we awnt to request a single frame if the view is hidden.
+        m_drawingArea->renderSingleFrameIfRenderingPaused();
     }
 
     send(Messages::WebPageProxy::DidReachLayoutMilestone(milestones));
