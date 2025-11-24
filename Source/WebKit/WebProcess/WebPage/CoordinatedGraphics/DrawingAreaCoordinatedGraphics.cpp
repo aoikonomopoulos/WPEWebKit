@@ -82,6 +82,10 @@ DrawingAreaCoordinatedGraphics::DrawingAreaCoordinatedGraphics(WebPage& webPage,
         m_webPage.corePage()->suspendActiveDOMObjectsAndAnimations();
         m_isViewSuspended = true;
     }
+
+    // Launch on hidden state situation.
+    if (m_usingPageLifecycle && !parameters.activityState.contains(ActivityState::IsVisible))
+        suspendPainting();
 }
 
 DrawingAreaCoordinatedGraphics::~DrawingAreaCoordinatedGraphics() = default;
@@ -723,6 +727,12 @@ void DrawingAreaCoordinatedGraphics::enterAcceleratedCompositingMode(GraphicsLay
         m_layerTreeHost->setShouldNotifyAfterNextScheduledLayerFlush(true);
 
     m_layerTreeHost->setRootCompositingLayer(graphicsLayer);
+
+    // We have entered AC mode and we have been set the root layer for the first time.
+    // If we're using Page Lifecycle then at this point the rendering is suspended and the
+    // view is in hidden state, and we need to produce a single frame.
+    if (m_usingPageLifecycle && m_isPaintingSuspended)
+        m_layerTreeHost->renderSingleFrameWhilePaused();
 
     // Non-composited content will now be handled exclusively by the layer tree host.
     m_dirtyRegion = WebCore::Region();
