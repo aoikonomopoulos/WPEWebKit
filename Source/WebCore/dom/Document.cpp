@@ -9250,6 +9250,26 @@ bool Document::lazyImageLoadingEnabled() const
     return m_settings->lazyImageLoadingEnabled() && !m_quirks->shouldDisableLazyImageLoadingQuirk();
 }
 
+// https://wicg.github.io/page-lifecycle/spec.html#freeze-steps
+void Document::freeze()
+{
+    if (m_frozen)
+        return;
+
+    m_frozen = true;
+    dispatchEvent(Event::create(eventNames().freezeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+}
+
+// https://wicg.github.io/page-lifecycle/spec.html#resume-steps
+void Document::resume()
+{
+    if (!m_frozen)
+        return;
+
+    dispatchEvent(Event::create(eventNames().resumeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    m_frozen = false;
+}
+
 } // namespace WebCore
 
 #undef DOCUMENT_RELEASE_LOG

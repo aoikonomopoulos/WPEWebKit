@@ -583,6 +583,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 #if ENABLE(APP_HIGHLIGHTS)
     , m_appHighlightsVisible(parameters.appHighlightsVisible)
 #endif
+    , m_resumeTimer(*this, &WebPage::resumeTimerFired)
 {
     ASSERT(m_identifier);
     WEBPAGE_RELEASE_LOG(Loading, "constructor:");
@@ -3783,18 +3784,60 @@ void WebPage::resumeActiveDOMObjectsAndAnimations()
     m_page->resumeActiveDOMObjectsAndAnimations();
 }
 
+enum class EventType { Freeze, Resume };
+
+static void dispatchEventToAllDocuments(Page& page, EventType type)
+{
+    auto& mainFrame = page.mainFrame();
+    Vector<Ref<Frame>> childFrames;
+    for (auto* child = mainFrame.tree().traverseNextInPostOrder(CanWrap::Yes); child; child = child->tree().traverseNextInPostOrder(CanWrap::No))
+        childFrames.append(*child);
+
+    for (auto& child : childFrames) {
+        if (!child->tree().isDescendantOf(&mainFrame))
+            continue;
+        auto* document = child->document();
+        if (!document)
+            continue;
+
+        switch (type) {
+        case EventType::Freeze:
+            document->freeze();
+            break;
+        case EventType::Resume:
+            document->resume();
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    }
+}
+
 void WebPage::suspend(CompletionHandler<void(bool)>&& completionHandler)
 {
     WEBPAGE_RELEASE_LOG(Loading, "suspend: m_page=%p", m_page.get());
     if (!m_page)
         return completionHandler(false);
 
+    // Before starting the suspension, notify the page so it can react to it.
+    dispatchEventToAllDocuments(*m_page, EventType::Freeze);
+
     freezeLayerTree(LayerTreeFreezeReason::PageSuspended);
 
+    BackForwardCache::singleton().setUsePageLifecycleEvents(true);
     m_cachedPage = BackForwardCache::singleton().suspendPage(*m_page);
+    BackForwardCache::singleton().setUsePageLifecycleEvents(false);
     ASSERT(m_cachedPage);
     if (auto mainFrame = m_mainFrame->coreFrame())
         mainFrame->loader().detachFromAllOpenedFrames();
+    completionHandler(true);
+}
+
+void WebPage::resumeTimerFired()
+{
+    dispatchEventToAllDocuments(*m_page, EventType::Resume);
+
+    auto completionHandler = std::exchange(m_resumeCompletionHandler, { });
     completionHandler(true);
 }
 
@@ -3811,7 +3854,11 @@ void WebPage::resume(CompletionHandler<void(bool)>&& completionHandler)
 
     cachedPage->restore(*m_page);
     unfreezeLayerTree(LayerTreeFreezeReason::PageSuspended);
-    completionHandler(true);
+
+    // After we have resumed, schedule a call to notify the page and invoke
+    // the completionHandler.
+    m_resumeCompletionHandler = WTFMove(completionHandler);
+    m_resumeTimer.startOneShot(0_s);
 }
 
 IntPoint WebPage::screenToRootView(const IntPoint& point)
