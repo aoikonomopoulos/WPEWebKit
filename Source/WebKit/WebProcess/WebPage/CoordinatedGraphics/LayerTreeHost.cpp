@@ -282,7 +282,7 @@ void LayerTreeHost::resumeRendering()
     m_compositor->resume();
 }
 
-void LayerTreeHost::renderSingleFrameWhilePaused()
+void LayerTreeHost::renderSingleFrameWhilePaused(bool requestFlush)
 {
     // This allows painting a single frame while the rendering has been paused without
     // actually resuming it. This is only used on 2 cases when page lifecycle is enabled:
@@ -294,6 +294,9 @@ void LayerTreeHost::renderSingleFrameWhilePaused()
 
     m_isSuspended = false;
     m_suspendAfterNextFlush = true;
+
+    if (requestFlush)
+        scheduleLayerFlush();
 }
 
 GraphicsLayerFactory* LayerTreeHost::graphicsLayerFactory()
