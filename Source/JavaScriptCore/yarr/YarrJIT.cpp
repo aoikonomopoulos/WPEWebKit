@@ -39,6 +39,7 @@
 #include <wtf/ASCIICType.h>
 #include <wtf/HexNumber.h>
 #include <wtf/ListDump.h>
+#include <wtf/ProgramPointCounter.h>
 #include <wtf/Threading.h>
 
 
@@ -4761,7 +4762,8 @@ void jitCompile(YarrPattern& pattern, StringView patternString, CharSize charSiz
             dataLog(" : ");
             dumpCompileFailure(*failureReason);
         }
-    }
+    } else
+        WTF_PROGRAM_POINT_COUNTER("yarr-jit successful compilations"_s);
 }
 
 #if ENABLE(YARR_JIT_REGEXP_TEST_INLINE)

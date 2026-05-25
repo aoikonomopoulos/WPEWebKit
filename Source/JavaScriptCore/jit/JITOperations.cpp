@@ -70,6 +70,8 @@
 #include "VMInlines.h"
 #include "VMTrapsInlines.h"
 
+#include <wtf/ProgramPointCounter.h>
+
 IGNORE_WARNINGS_BEGIN("frame-address")
 
 namespace JSC {
@@ -2058,6 +2060,7 @@ JSC_DEFINE_JIT_OPERATION(operationOptimize, SlowPathReturnType, (VM* vmPointer, 
         CODEBLOCK_LOG_EVENT(optimizedCodeBlock, "osrEntry", ("at bc#", bytecodeIndex));
         dataLogLnIf(Options::verboseOSR(), "Performing OSR ", codeBlock, " -> ", optimizedCodeBlock);
 
+        WTF_PROGRAM_POINT_COUNTER("DFG tier ups"_s);
         codeBlock->optimizeSoon();
         codeBlock->unlinkedCodeBlock()->setDidOptimize(TriState::True);
         void* targetPC = untagCodePtr<JITThunkPtrTag>(vm.getCTIStub(DFG::osrEntryThunkGenerator).code().executableAddress());

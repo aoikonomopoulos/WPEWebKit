@@ -32,6 +32,7 @@
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
+#include <wtf/ProgramPointCounter.h>
 #include <wtf/Spectrum.h>
 
 namespace JSC {
@@ -163,6 +164,7 @@ public:
     void dump(PrintStream&) const;
     
     void log() const;
+    void count() const;
     
 private:
     
@@ -218,9 +220,15 @@ private:
     static Atomic<ICStats*> s_instance;
 };
 
-#define LOG_IC(arguments) do {                  \
-        if (Options::useICStats())              \
-            (ICEvent arguments).log();          \
+#define LOG_IC(arguments)                                                   \
+    do {                                                                    \
+        if (!ProgramPointCountersEnabled::get() && !Options::useICStats())   \
+            break;                                                          \
+        auto icEvent = (ICEvent arguments);                                 \
+        if (ProgramPointCountersEnabled::get())                              \
+            icEvent.count();                                                \
+        if (Options::useICStats())                                          \
+            icEvent.log();                                                  \
     } while (false)
 
 } // namespace JSC

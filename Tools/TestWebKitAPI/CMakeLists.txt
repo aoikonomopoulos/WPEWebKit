@@ -74,6 +74,7 @@ set(TestWTF_SOURCES
     Tests/WTF/PackedRefPtr.cpp
     Tests/WTF/ParkingLot.cpp
     Tests/WTF/PriorityQueue.cpp
+    Tests/WTF/ProgramPointCounter.cpp
     Tests/WTF/RedBlackTree.cpp
     Tests/WTF/Ref.cpp
     Tests/WTF/RefCountedFixedVector.cpp

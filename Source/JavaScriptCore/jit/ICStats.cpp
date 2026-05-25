@@ -59,6 +59,17 @@ void ICEvent::log() const
     ICStats::instance().add(*this);
 }
 
+void ICEvent::count() const
+{
+#define ICEVENT_KIND_CASE(name) case ICEvent::name: WTF_PROGRAM_POINT_COUNTER(ASCIILiteral::fromLiteralUnsafe("IC: " #name)); break;
+    switch(m_kind) {
+    FOR_EACH_ICEVENT_KIND(ICEVENT_KIND_CASE)
+    default:
+        break;
+    };
+#undef ICEVENT_KIND_CASE
+}
+
 Atomic<ICStats*> ICStats::s_instance;
 
 ICStats::ICStats()

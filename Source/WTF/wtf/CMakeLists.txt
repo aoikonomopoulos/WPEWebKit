@@ -211,6 +211,7 @@ set(WTF_PUBLIC_HEADERS
     PriorityQueue.h
     ProcessID.h
     ProcessPrivilege.h
+    ProgramPointCounter.h
     PtrTag.h
     RAMSize.h
     RandomDevice.h
@@ -467,6 +468,7 @@ set(WTF_SOURCES
     ParkingLot.cpp
     PrintStream.cpp
     ProcessPrivilege.cpp
+    ProgramPointCounter.cpp
     RAMSize.cpp
     RandomDevice.cpp
     RandomNumber.cpp
